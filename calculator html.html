@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --card: #12121a;
+    --glass: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --accent: #7effc4;
+    --accent2: #ff6ef7;
+    --accent3: #6eb5ff;
+    --text: #f0f0f5;
+    --muted: #5a5a70;
+    --btn: #1a1a28;
+    --btn-hover: #22223a;
+    --display-bg: #0d0d16;
+    --radius: 18px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    padding: 20px 0 30px;
+  }
+
+  /* Animated background */
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 20%, rgba(126,255,196,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 80%, rgba(255,110,247,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 50% 50%, rgba(110,181,255,0.04) 0%, transparent 70%),
+      #0a0a0f;
+  }
+
+  .grid-overlay {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+  }
+
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(80px); z-index: 0; pointer-events: none;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+  .orb1 { width: 380px; height: 380px; background: rgba(126,255,196,0.10); top: -100px; left: -80px; animation-delay: 0s; }
+  .orb2 { width: 300px; height: 300px; background: rgba(255,110,247,0.09); bottom: -80px; right: -60px; animation-delay: -4s; }
+  .orb3 { width: 220px; height: 220px; background: rgba(110,181,255,0.08); top: 40%; left: 60%; animation-delay: -8s; }
+
+  @keyframes drift {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(30px, 20px) scale(1.08); }
+  }
+
+  .wrapper {
+    position: relative; z-index: 1;
+    width: 400px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 28px 24px 24px;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03),
+      0 40px 80px rgba(0,0,0,0.6),
+      0 0 60px rgba(126,255,196,0.04);
+    backdrop-filter: blur(20px);
+    animation: slideUp 0.6s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(40px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .header-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  /* Display */
+  .display {
+    background: var(--display-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px 14px;
+    margin-bottom: 20px;
+    min-height: 100px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    position: relative;
+    overflow: hidden;
+  }
+  .display::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.4;
+  }
+
+  .display-expr {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    min-height: 18px;
+    text-align: right;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: color 0.2s;
+  }
+  .display-main {
+    font-family: 'Space Mono', monospace;
+    font-size: 36px; font-weight: 700;
+    color: var(--text);
+    text-align: right;
+    letter-spacing: -1px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: font-size 0.15s;
+  }
+  .display-op-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    min-height: 14px;
+    margin-bottom: 2px;
+  }
+  .display-result {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    text-align: right;
+    min-height: 20px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  /* Operation tabs */
+  .op-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .op-tab {
+    flex: 1; min-width: 60px;
+    padding: 7px 4px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: center;
+    user-select: none;
+  }
+  .op-tab:hover { color: var(--text); border-color: rgba(255,255,255,0.18); background: var(--btn-hover); }
+  .op-tab.active {
+    background: rgba(126,255,196,0.10);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 14px rgba(126,255,196,0.12);
+  }
+
+  /* Input row */
+  .inputs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+  }
+  .input-group { display: flex; flex-direction: column; gap: 5px; }
+  .input-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+    padding-left: 2px;
+  }
+  .num-input {
+    background: var(--display-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.18s, box-shadow 0.18s;
+    width: 100%;
+  }
+  .num-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(126,255,196,0.10);
+  }
+  .num-input::placeholder { color: var(--muted); font-size: 13px; }
+
+  /* Calculate button */
+  .calc-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    border: none; outline: none;
+    background: linear-gradient(135deg, var(--accent) 0%, #4de8a0 100%);
+    color: #0a1a12;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+    box-shadow: 0 4px 24px rgba(126,255,196,0.25);
+    margin-bottom: 14px;
+    position: relative; overflow: hidden;
+  }
+  .calc-btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.18s;
+  }
+  .calc-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(126,255,196,0.35); }
+  .calc-btn:hover::after { opacity: 1; }
+  .calc-btn:active { transform: translateY(1px); }
+
+  /* Quick numpad */
+  .numpad { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+  .key {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--btn);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+    user-select: none;
+    position: relative; overflow: hidden;
+  }
+  .key:hover { background: var(--btn-hover); border-color: rgba(255,255,255,0.15); transform: scale(1.04); }
+  .key:active { transform: scale(0.96); }
+  .key.zero { grid-column: span 2; aspect-ratio: auto; padding: 10px; }
+  .key.op-key { color: var(--accent3); border-color: rgba(110,181,255,0.18); }
+  .key.clear { color: var(--accent2); border-color: rgba(255,110,247,0.18); }
+  .key.backspace { color: var(--accent2); }
+  .key.dot { color: var(--accent); }
+  .key.equals {
+    background: linear-gradient(135deg, var(--accent3), #4a8fff);
+    color: #0a0d1a;
+    border: none;
+    font-weight: 800;
+    box-shadow: 0 4px 18px rgba(110,181,255,0.25);
+  }
+  .key.equals:hover { transform: scale(1.06); box-shadow: 0 6px 24px rgba(110,181,255,0.35); }
+
+  .ripple {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transform: scale(0); animation: ripple 0.4s ease-out;
+    pointer-events: none;
+  }
+  @keyframes ripple {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* Error state */
+  .error { color: var(--accent2) !important; }
+
+  .section-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* History */
+  .history-section { margin-top: 14px; }
+  .history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .history-clear {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+    background: none; border: 1px solid var(--border);
+    border-radius: 20px; padding: 3px 10px;
+    cursor: pointer; font-family: 'Syne', sans-serif;
+    transition: all 0.18s;
+  }
+  .history-clear:hover { color: var(--accent2); border-color: var(--accent2); }
+  .history-list {
+    max-height: 200px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 6px; padding-right: 2px;
+  }
+  .history-list::-webkit-scrollbar { width: 3px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+  .history-empty {
+    text-align: center; font-family: 'Space Mono', monospace;
+    font-size: 11px; color: var(--muted); padding: 20px 0; letter-spacing: 0.06em;
+  }
+  .history-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--display-bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 9px 13px;
+    cursor: pointer; transition: all 0.15s; gap: 8px;
+    animation: historyIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes historyIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .history-item:hover { border-color: rgba(126,255,196,0.3); background: rgba(126,255,196,0.04); }
+  .history-item:hover .history-reuse { opacity: 1; }
+  .history-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .history-expr { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-res { font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700; color: var(--accent); }
+  .history-res.err { color: var(--accent2); font-size: 11px; }
+  .history-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .history-op-badge {
+    font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    background: var(--glass); border: 1px solid var(--border);
+    border-radius: 6px; padding: 2px 6px; color: var(--muted);
+  }
+  .history-time { font-family: 'Space Mono', monospace; font-size: 8px; color: var(--muted); }
+  .history-reuse { font-size: 8px; color: var(--accent3); opacity: 0; transition: opacity 0.15s; font-family: 'Space Mono', monospace; white-space: nowrap; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--card); border: 1px solid var(--accent);
+    color: var(--accent); font-family: 'Space Mono', monospace; font-size: 12px;
+    padding: 10px 22px; border-radius: 40px;
+    opacity: 0; transition: all 0.3s;
+    pointer-events: none; z-index: 100;
+    box-shadow: 0 4px 24px rgba(126,255,196,0.15);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="grid-overlay"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="wrapper">
+  <div class="header">
+    <span class="header-title">Calc Pro</span>
+    <div class="header-dot"></div>
+  </div>
+
+  <!-- Display -->
+  <div class="display">
+    <div class="display-op-label" id="opLabel"></div>
+    <div class="display-expr" id="exprDisplay"></div>
+    <div class="display-main" id="mainDisplay">0</div>
+    <div class="display-result" id="resultDisplay"></div>
+  </div>
+
+  <!-- Operation tabs -->
+  <div class="section-label">Operation</div>
+  <div class="op-tabs">
+    <div class="op-tab active" data-op="add" title="Addition">Add</div>
+    <div class="op-tab" data-op="sub" title="Subtraction">Sub</div>
+    <div class="op-tab" data-op="mul" title="Multiplication">Mul</div>
+    <div class="op-tab" data-op="div" title="Division">Div</div>
+    <div class="op-tab" data-op="avg" title="Average">Avg</div>
+    <div class="op-tab" data-op="pow" title="Power (A^B)">Pow</div>
+    <div class="op-tab" data-op="mod" title="Modulo (A%B)">Mod</div>
+    <div class="op-tab" data-op="sqrt" title="Square root of A">√A</div>
+    <div class="op-tab" data-op="pct" title="A % of B">A%B</div>
+    <div class="op-tab" data-op="log" title="Log base B of A">LogB</div>
+  </div>
+
+  <!-- Inputs -->
+  <div class="inputs">
+    <div class="input-group">
+      <div class="input-label">Number A</div>
+      <input class="num-input" id="numA" type="number" placeholder="0" step="any">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Number B</div>
+      <input class="num-input" id="numB" type="number" placeholder="0" step="any" id="numBInput">
+    </div>
+  </div>
+
+  <button class="calc-btn" id="calcBtn">Calculate</button>
+
+  <div class="divider"></div>
+
+  <!-- Numpad -->
+  <div class="section-label">Quick Numpad</div>
+  <div class="numpad" id="numpad">
+    <div class="key clear" data-val="C">C</div>
+    <div class="key backspace" data-val="⌫">⌫</div>
+    <div class="key op-key" data-val="/">÷</div>
+    <div class="key op-key" data-val="*">×</div>
+    <div class="key" data-val="7">7</div>
+    <div class="key" data-val="8">8</div>
+    <div class="key" data-val="9">9</div>
+    <div class="key op-key" data-val="-">−</div>
+    <div class="key" data-val="4">4</div>
+    <div class="key" data-val="5">5</div>
+    <div class="key" data-val="6">6</div>
+    <div class="key op-key" data-val="+">+</div>
+    <div class="key" data-val="1">1</div>
+    <div class="key" data-val="2">2</div>
+    <div class="key" data-val="3">3</div>
+    <div class="key equals" data-val="=" style="grid-row:span 2">=</div>
+    <div class="key zero" data-val="0">0</div>
+    <div class="key dot" data-val=".">.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="history-header">
+      <div class="section-label" style="margin-bottom:0">History</div>
+      <button class="history-clear" id="clearHistory">Clear All</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty" id="historyEmpty">No calculations yet</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let currentOp = 'add';
+  let activeField = 'A'; // which input is the numpad targeting
+  let numpadValue = '';
+
+  const opMeta = {
+    add:  { label: 'Addition',       sym: '+',  needsB: true  },
+    sub:  { label: 'Subtraction',    sym: '−',  needsB: true  },
+    mul:  { label: 'Multiplication', sym: '×',  needsB: true  },
+    div:  { label: 'Division',       sym: '÷',  needsB: true  },
+    avg:  { label: 'Average',        sym: 'avg',needsB: true  },
+    pow:  { label: 'Power',          sym: '^',  needsB: true  },
+    mod:  { label: 'Modulo',         sym: '%',  needsB: true  },
+    sqrt: { label: 'Square Root',    sym: '√',  needsB: false },
+    pct:  { label: '% of',          sym: '%of',needsB: true  },
+    log:  { label: 'Log Base',       sym: 'log',needsB: true  },
+  };
+
+  // ── Operations (mirrors + extends Python logic) ────────────────────────
+  function calculate(op, a, b) {
+    switch (op) {
+      case 'add':  return a + b;
+      case 'sub':  return a - b;
+      case 'mul':  return a * b;
+      case 'div':
+        if (b === 0) throw new Error('Division by zero');
+        return a / b;
+      case 'avg':  return (a + b) / 2;
+      case 'pow':  return Math.pow(a, b);
+      case 'mod':
+        if (b === 0) throw new Error('Modulo by zero');
+        return a % b;
+      case 'sqrt':
+        if (a < 0) throw new Error('Negative square root');
+        return Math.sqrt(a);
+      case 'pct':  return (a / 100) * b;
+      case 'log':
+        if (a <= 0 || b <= 0 || b === 1) throw new Error('Invalid log input');
+        return Math.log(a) / Math.log(b);
+    }
+  }
+
+  function fmtExpr(op, a, b) {
+    const m = opMeta[op];
+    if (op === 'sqrt') return `√( ${a} )`;
+    if (op === 'pct')  return `${a}% of ${b}`;
+    if (op === 'log')  return `log${b}( ${a} )`;
+    if (op === 'avg')  return `avg( ${a}, ${b} )`;
+    return `${a} ${m.sym} ${b}`;
+  }
+
+  function fmtNum(n) {
+    if (Math.abs(n) >= 1e12 || (Math.abs(n) < 1e-6 && n !== 0)) return n.toExponential(6);
+    const s = parseFloat(n.toFixed(10)).toString();
+    return s;
+  }
+
+  // ── DOM refs ───────────────────────────────────────────────────────────
+  const numA = document.getElementById('numA');
+  const numB = document.getElementById('numB');
+  const mainDisplay = document.getElementById('mainDisplay');
+  const exprDisplay = document.getElementById('exprDisplay');
+  const resultDisplay = document.getElementById('resultDisplay');
+  const opLabel = document.getElementById('opLabel');
+  const calcBtn = document.getElementById('calcBtn');
+  const toastEl = document.getElementById('toast');
+
+  // ── Op tabs ────────────────────────────────────────────────────────────
+  document.querySelectorAll('.op-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.op-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentOp = tab.dataset.op;
+      const needsB = opMeta[currentOp].needsB;
+      numB.closest('.input-group').style.opacity = needsB ? '1' : '0.3';
+      numB.disabled = !needsB;
+      opLabel.textContent = opMeta[currentOp].label;
+      resultDisplay.textContent = '';
+      exprDisplay.textContent = '';
+      resultDisplay.classList.remove('error');
+    });
+  });
+
+  opLabel.textContent = opMeta[currentOp].label;
+
+  // ── Calculate ──────────────────────────────────────────────────────────
+  function doCalculate() {
+    const a = parseFloat(numA.value);
+    const b = parseFloat(numB.value) || 0;
+
+    if (isNaN(a)) { showToast('Enter Number A'); return; }
+    if (opMeta[currentOp].needsB && isNaN(parseFloat(numB.value))) { showToast('Enter Number B'); return; }
+
+    try {
+      const res = calculate(currentOp, a, b);
+      const expr = fmtExpr(currentOp, a, b);
+      exprDisplay.textContent = expr + ' =';
+      resultDisplay.textContent = fmtNum(res);
+      mainDisplay.textContent = fmtNum(res);
+      resultDisplay.classList.remove('error');
+      rippleBtn();
+      addToHistory({ expr: expr + ' =', result: fmtNum(res), op: opMeta[currentOp].label, opKey: currentOp, a, b, time: timeStr(), isErr: false });
+    } catch (e) {
+      resultDisplay.textContent = e.message;
+      resultDisplay.classList.add('error');
+      mainDisplay.textContent = 'Err';
+      addToHistory({ expr: fmtExpr(currentOp, a, b), result: e.message, op: opMeta[currentOp].label, opKey: currentOp, a, b, time: timeStr(), isErr: true });
+    }
+  }
+
+  calcBtn.addEventListener('click', doCalculate);
+
+  // Live preview as numbers change
+  [numA, numB].forEach(inp => {
+    inp.addEventListener('input', () => {
+      const a = parseFloat(numA.value);
+      const b = parseFloat(numB.value);
+      if (!isNaN(a)) mainDisplay.textContent = fmtNum(a);
+      resultDisplay.textContent = '';
+      exprDisplay.textContent = '';
+    });
+    inp.addEventListener('focus', () => { activeField = inp === numA ? 'A' : 'B'; });
+  });
+
+  // ── Numpad ────────────────────────────────────────────────────────────
+  document.getElementById('numpad').addEventListener('click', e => {
+    const key = e.target.closest('.key');
+    if (!key) return;
+    addRipple(key, e);
+    const val = key.dataset.val;
+    const target = activeField === 'A' ? numA : numB;
+
+    if (val === 'C') {
+      numA.value = ''; numB.value = '';
+      mainDisplay.textContent = '0';
+      exprDisplay.textContent = '';
+      resultDisplay.textContent = '';
+      resultDisplay.classList.remove('error');
+      return;
+    }
+    if (val === '⌫') {
+      target.value = target.value.slice(0, -1);
+      mainDisplay.textContent = target.value || '0';
+      return;
+    }
+    if (val === '=') { doCalculate(); return; }
+
+    // op shortcuts from numpad
+    if (['+','-','*','/'].includes(val)) {
+      const map = { '+':'add', '-':'sub', '*':'mul', '/':'div' };
+      const newOp = map[val];
+      document.querySelectorAll('.op-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.op === newOp);
+      });
+      currentOp = newOp;
+      opLabel.textContent = opMeta[newOp].label;
+      numB.closest('.input-group').style.opacity = '1';
+      numB.disabled = false;
+      activeField = 'B'; numB.focus();
+      return;
+    }
+
+    // number / dot
+    if (val === '.' && target.value.includes('.')) return;
+    target.value += val;
+    mainDisplay.textContent = target.value;
+    target.dispatchEvent(new Event('input'));
+  });
+
+  // ── Keyboard support ──────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doCalculate();
+  });
+
+  // ── Ripple effect ─────────────────────────────────────────────────────
+  function addRipple(el, e) {
+    const r = document.createElement('span');
+    r.className = 'ripple';
+    const rect = el.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+    el.appendChild(r);
+    setTimeout(() => r.remove(), 400);
+  }
+
+  function rippleBtn() {
+    calcBtn.style.transform = 'scale(0.97)';
+    setTimeout(() => calcBtn.style.transform = '', 150);
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2000);
+  }
+
+  // ── History ────────────────────────────────────────────────────────────
+  let history = [];
+
+  const historyList = document.getElementById('historyList');
+  const historyEmpty = document.getElementById('historyEmpty');
+
+  function timeStr() {
+    const d = new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function addToHistory(entry) {
+    history.unshift(entry);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    // Remove all items but keep empty placeholder
+    historyList.querySelectorAll('.history-item').forEach(el => el.remove());
+
+    if (history.length === 0) {
+      historyEmpty.style.display = '';
+      return;
+    }
+    historyEmpty.style.display = 'none';
+
+    history.forEach((entry, idx) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.style.animationDelay = `${idx * 0.03}s`;
+      item.innerHTML = `
+        <div class="history-left">
+          <div class="history-expr">${entry.expr}</div>
+          <div class="history-res ${entry.isErr ? 'err' : ''}">${entry.result}</div>
+        </div>
+        <div class="history-meta">
+          <div class="history-op-badge">${entry.op}</div>
+          <div class="history-time">${entry.time}</div>
+          <div class="history-reuse">↩ reuse</div>
+        </div>
+      `;
+      // Click to reuse
+      if (!entry.isErr) {
+        item.addEventListener('click', () => {
+          numA.value = entry.a;
+          numB.value = entry.b !== undefined ? entry.b : '';
+          // Switch to op
+          document.querySelectorAll('.op-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.op === entry.opKey);
+          });
+          currentOp = entry.opKey;
+          opLabel.textContent = opMeta[entry.opKey].label;
+          const needsB = opMeta[entry.opKey].needsB;
+          numB.closest('.input-group').style.opacity = needsB ? '1' : '0.3';
+          numB.disabled = !needsB;
+          mainDisplay.textContent = fmtNum(entry.a);
+          resultDisplay.textContent = '';
+          exprDisplay.textContent = '';
+          showToast('Values restored — click Calculate');
+        });
+      }
+      historyList.appendChild(item);
+    });
+  }
+
+  document.getElementById('clearHistory').addEventListener('click', () => {
+    history = [];
+    renderHistory();
+    showToast('History cleared');
+  });
+
+  // Focus numA on load
+  numA.focus();
+</script>
+</body>
+</html>
